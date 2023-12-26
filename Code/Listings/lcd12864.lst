@@ -1,0 +1,356 @@
+C51 COMPILER V9.60.0.0   LCD12864                                                          12/23/2023 11:58:25 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE LCD12864
+OBJECT MODULE PLACED IN .\Objects\lcd12864.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE lcd12864.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\
+                    -lcd12864.lst) TABS(2) OBJECT(.\Objects\lcd12864.obj)
+
+line level    source
+
+   1          #include"lcd12864.h"
+   2          
+   3          
+   4          // Ham Delay 1ms 
+   5          void LCD12864_Delay1ms(uint c) 
+   6          {
+   7   1        uchar a,b;
+   8   1        for(; c>0; c--)
+   9   1        {
+  10   2            for(b=199; b>0; b--)
+  11   2          {
+  12   3                for(a=1; a>0; a--);
+  13   3          }
+  14   2        }
+  15   1      }
+  16          
+  17          
+  18          // Ham kiem tra LCD co dang ban ko
+  19          uchar LCD12864_Busy(void)
+  20          {
+  21   1        uchar i = 0;
+  22   1      
+  23   1        LCD12864_RS = 0; // chan RS = 0 -> giao tiep voi thanh ghi lenh
+  24   1        LCD12864_RW = 1; // chan RW = 1 -> che do doc
+  25   1      
+  26   1        LCD12864_EN = 1; // chan EN len muc 1 
+  27   1        LCD12864_Delay1ms(1); // delay LCD 1 ms
+  28   1      
+  29   1        while((LCD12864_DATAPORT & 0x80) == 0x80) // kiem tra bit thu 8 cua du lieu co = 1 ko
+  30   1        {
+  31   2          i++;
+  32   2          if(i > 100)
+  33   2          {
+  34   3            LCD12864_EN = 0; // chan EN xuong muc 0 
+  35   3            return 0; // tra ve 0 (LCD ban)
+  36   3          }
+  37   2        }
+  38   1      
+  39   1        LCD12864_EN = 0;// chan EN xuong muc 0
+  40   1      
+  41   1        return 1; // LCD ranh
+  42   1      }
+  43          
+  44          
+  45          void LCD12864_WriteCmd(uchar cmd)
+  46          {
+  47   1        uchar i;
+  48   1        i = 0;
+  49   1        while( LCD12864_Busy() == 0) // Kiem tra LCD co ban ko
+  50   1        {
+  51   2          LCD12864_Delay1ms(1);
+  52   2          i++;
+  53   2          if( i>100)
+  54   2          {
+C51 COMPILER V9.60.0.0   LCD12864                                                          12/23/2023 11:58:25 PAGE 2   
+
+  55   3            return;  // neu LCD ban thi thoat khoi ham
+  56   3          } 
+  57   2        }
+  58   1        
+  59   1        LCD12864_RS = 0; // chan RS = 0 -> giao tiep voi thanh ghi lenh
+  60   1        LCD12864_RW = 0; // chan RW = 0 -> che do ghi    
+  61   1        LCD12864_EN = 0; // chan EN xuong muc 0    
+  62   1      
+  63   1        LCD12864_DATAPORT = cmd; // thuc hien viec ghi lenh
+  64   1      
+  65   1        LCD12864_EN = 1; // chan EN len muc 1 de kich xung
+  66   1        LCD12864_Delay1ms(1); // delay LCD 1ms
+  67   1        LCD12864_EN = 0;  // chan EN xuong lai muc 0            
+  68   1      }
+  69          
+  70          
+  71          // Ham gui du lieu (hien thi len LCD)
+  72          void LCD12864_WriteData(uchar dat)
+  73          {
+  74   1        uchar i;
+  75   1        i = 0;
+  76   1        while( LCD12864_Busy() == 0) // Kiem tra LCD co ban ko
+  77   1        {
+  78   2          LCD12864_Delay1ms(1);
+  79   2          i++;
+  80   2          if( i>100)
+  81   2          {
+  82   3            return;   
+  83   3          } 
+  84   2        }
+  85   1      
+  86   1        LCD12864_RS = 1; // chan RS = 1 -> giao tiep voi thanh ghi du lieu (hien thi len LCD)
+  87   1        LCD12864_RW = 0; // chan RW = 0 -> che do ghi      
+  88   1        LCD12864_EN = 0; // chan EN xuong muc 0     
+  89   1      
+  90   1        LCD12864_DATAPORT = dat;  // ghi du lieu len LCD
+  91   1      
+  92   1        LCD12864_EN = 1;  // chan EN len muc 1 de kich xung    
+  93   1        LCD12864_Delay1ms(1); // delay LCD 1ms
+  94   1        LCD12864_EN = 0;  // chan EN xuong lai muc 0                
+  95   1      }
+  96          
+  97          
+  98          #ifdef LCD12864_PICTURE
+  99          
+ 100          // Ham doc du lieu
+ 101          uchar LCD12864_ReadData(void)
+ 102          {
+ 103   1        uchar i, readValue;
+ 104   1      
+ 105   1        i = 0;
+ 106   1        while( LCD12864_Busy() == 0) // Kiem tra LCD co ban ko
+ 107   1        {
+ 108   2          LCD12864_Delay1ms(1);
+ 109   2          i++;
+ 110   2          if( i>100)
+ 111   2          {
+ 112   3            return 0;    
+ 113   3          } 
+ 114   2        }
+ 115   1      
+ 116   1        LCD12864_RS = 1;   // chan RS = 1 -> giao tiep voi thanh ghi du lieu 
+C51 COMPILER V9.60.0.0   LCD12864                                                          12/23/2023 11:58:25 PAGE 3   
+
+ 117   1        LCD12864_RW = 1;   // chan RW = 1 -> che do doc  
+ 118   1        LCD12864_EN = 0;   // chan EN xuong muc 0
+ 119   1        LCD12864_Delay1ms(1);   // delay LCD 1ms
+ 120   1      
+ 121   1        LCD12864_EN = 1; // chan EN len muc 1 (kich xung)
+ 122   1        LCD12864_Delay1ms(1); // delay LCD 1ms
+ 123   1        readValue = LCD12864_DATAPORT; // Lay du lieu vua doc duoc luu vao bien readValue
+ 124   1        LCD12864_EN = 0; // chan EN xuong muc 0
+ 125   1      
+ 126   1        return readValue; // tra ve gia tri vua doc duoc
+ 127   1      }
+ 128          
+ 129          #endif
+ 130          
+ 131          
+ 132          // Ham khoi tao
+ 133          void LCD12864_Init()
+ 134          {
+ 135   1        LCD12864_PSB = 1;   // chon che do truyen song song 8/4 bit
+ 136   1        LCD12864_RST = 1;   // Dua chan RST len muc 1 (ko reset)
+ 137   1        
+ 138   1        // gui lenh Function set 0x30 (0011 0000)-> chon che do giao tiep 8 bit
+ 139   1        LCD12864_WriteCmd(0x30); 
+ 140   1        // gui lenh Display control 0x0C (0000 1100) -> display on, cursor off (tat con tro), character blink off
+             - (ko chop ki tu)  
+ 141   1        LCD12864_WriteCmd(0x0c);
+ 142   1        // gui lenh Display clear 0x01 (0000 0001) -> xoa man hinh
+ 143   1        LCD12864_WriteCmd(0x01);
+ 144   1        // gui lenh Entry Mode set 0x06 (0000 0110) -> bit thu 2 = 1 -> khi ghi xong 1 ki tu con tro tu dong dich
+             - phai
+ 145   1        LCD12864_WriteCmd(0x06); 
+ 146   1      }
+ 147          
+ 148          
+ 149          #ifdef LCD12864_PICTURE
+ 150          
+ 151          // Ham xoa man hinh
+ 152          void LCD12864_ClearScreen(void)
+ 153          {
+ 154   1        uchar i,j;
+ 155   1        
+ 156   1        // gui lenh Set Graphic RAM Address 0x34 (0011 0100) -> chon che do giao tiep 8 bit, bit thu 3 = 1 -> ext
+             -ended instruction
+ 157   1        LCD12864_WriteCmd(0x34);    
+ 158   1      
+ 159   1        for(i=0;i<32;i++)     
+ 160   1        {
+ 161   2          LCD12864_WriteCmd(0x80+i); // Dia chi chieu doc GDRAM (xem datasheet)
+ 162   2          LCD12864_WriteCmd(0x80);   // Dia chi chieu ngang GDRAM (xem datasheet)
+ 163   2          for(j=0;j<32;j++)     // ghi 2 lan 16 (ngang)
+ 164   2          {             
+ 165   3            LCD12864_WriteData(0x00);   // ghi vao thanh ghi du lieu 0x00 (xoa cac gia tri truoc)
+ 166   3          }
+ 167   2        }
+ 168   1        
+ 169   1        // gui lenh Extended Function Set 0x36 (0011 0110) -> chon che do giao tiep 8 bit, bit thu 3 = 1 -> exten
+             -ded instruction
+ 170   1        // bit thu 2 -> graphic display ON
+ 171   1        LCD12864_WriteCmd(0x36);
+ 172   1        // gui lenh Function set 0x30 (0011 0000)-> chon che do giao tiep 8 bit, bit thu 3 = 1 -> basic instructi
+             -on
+ 173   1        LCD12864_WriteCmd(0x30);   
+C51 COMPILER V9.60.0.0   LCD12864                                                          12/23/2023 11:58:25 PAGE 4   
+
+ 174   1      }
+ 175          
+ 176          #endif
+ 177          
+ 178          
+ 179          // Ham set vi tri cho con tro
+ 180          void LCD12864_SetWindow(uchar x, uchar y)
+ 181          {
+ 182   1        uchar pos; 
+ 183   1      
+ 184   1        if(x == 0)     // Hang dau tien
+ 185   1        {
+ 186   2          x = 0x80; // Dia chi tung hang co trong datasheet
+ 187   2        }
+ 188   1          
+ 189   1        else if(x == 1)  // Hang thu hai
+ 190   1        {
+ 191   2          x = 0x90;  // Dia chi tung hang co trong datasheet
+ 192   2        }
+ 193   1        
+ 194   1        else if(x == 2)  // Hang thu ba
+ 195   1        {
+ 196   2          x = 0x88; // Dia chi tung hang co trong datasheet
+ 197   2        }
+ 198   1        
+ 199   1        else if(x == 3) // Hang thu tu
+ 200   1        {
+ 201   2          x = 0x98; // Dia chi tung hang co trong datasheet
+ 202   2        }
+ 203   1        
+ 204   1        pos = x + y; // Gia tri cua vi tri = gia tri cua hang + cot (trong datasheet)
+ 205   1        LCD12864_WriteCmd(pos); // Gui lenh di chuyen con tro den vi tri da cai dat
+ 206   1      }
+ 207          
+ 208          
+ 209          #ifdef LCD12864_PICTURE
+ 210          
+ 211          // Ham ve hinh
+ 212          void LCD12864_DrowPic(uchar *a)    
+ 213          {
+ 214   1      
+ 215   1        unsigned char i,j;
+ 216   1        
+ 217   1        // Xoa man hinh
+ 218   1        LCD12864_ClearScreen();
+ 219   1        
+ 220   1        // gui lenh Set Graphic RAM Address 0x34 (0011 0100) -> chon che do giao tiep 8 bit, bit thu 3 = 1 -> ext
+             -ended instruction
+ 221   1        LCD12864_WriteCmd(0x34);    
+ 222   1        
+ 223   1        // Ve 1 nua ben tren
+ 224   1        for(i=0;i<32;i++)       
+ 225   1        {
+ 226   2          LCD12864_WriteCmd(0x80+i);      
+ 227   2          LCD12864_WriteCmd(0x80);      
+ 228   2          for(j=0; j<16; j++)     
+ 229   2          {            
+ 230   3            LCD12864_WriteData(*a);         
+ 231   3            a++;
+ 232   3          }
+ 233   2        }
+ 234   1        // Ve 1 nua ben duoi
+C51 COMPILER V9.60.0.0   LCD12864                                                          12/23/2023 11:58:25 PAGE 5   
+
+ 235   1        for(i=0; i<32; i++)       
+ 236   1        {
+ 237   2          
+ 238   2          LCD12864_WriteCmd(0x80+i); // Dia chi chieu doc GDRAM (xem datasheet)
+ 239   2          LCD12864_WriteCmd(0x88);   // Dia chi chieu ngang GDRAM (xem datasheet)
+ 240   2          for(j=0; j<16; j++)     
+ 241   2          {             
+ 242   3            LCD12864_WriteData(*a);         
+ 243   3            a++;    
+ 244   3          }
+ 245   2        } 
+ 246   1        
+ 247   1        // gui lenh Extended Function Set 0x36 (0011 0110) -> chon che do giao tiep 8 bit, bit thu 3 = 1 -> exten
+             -ded instruction
+ 248   1        // bit thu 2 -> graphic display ON
+ 249   1        LCD12864_WriteCmd(0x36);     
+ 250   1        // gui lenh Function set 0x30 (0011 0000)-> chon che do giao tiep 8 bit, bit thu 3 = 1 -> basic instructi
+             -on
+ 251   1        LCD12864_WriteCmd(0x30);       
+ 252   1      }
+ 253          
+ 254          
+ 255          // Ham ve 1 diem anh tren LCD (x = 0~127; y = 0~63)
+ 256          void LCD12864_DrowPoint(uchar x, uchar y)
+ 257          {
+ 258   1        uint bt = 0, readValue = 0;
+ 259   1        uchar x_adr, y_adr, h_bit, l_bit;
+ 260   1      
+ 261   1        y_adr = 0x80 + y % 32;    
+ 262   1        // Lenh dieu khien Set Graphic RAM Address chi co the dieu chinh dc 32 gia tri cho chieu doc (xem datashe
+             -et)
+ 263   1        
+ 264   1        if(y>31) // Neu qua 31 thi xuong hang 2
+ 265   1        {
+ 266   2          x_adr = 0x88 + x / 16;
+ 267   2          // Lenh dieu khien Set Graphic RAM Address chi co the dieu chinh dc 16 gia tri cho chieu ngang (xem data
+             -sheet)
+ 268   2        }
+ 269   1        
+ 270   1        else // Ko thi hang dau tien
+ 271   1        {
+ 272   2          x_adr = 0x80 + x / 16;
+ 273   2        }
+ 274   1        
+ 275   1        bt = 0x8000 >> (x % 16); // Vi tri cua diem se duoc ghi vao
+ 276   1        
+ 277   1        // gui lenh Set Graphic RAM Address 0x34 (0011 0100) -> chon che do giao tiep 8 bit, bit thu 3 = 1 -> ext
+             -ended instruction
+ 278   1        LCD12864_WriteCmd(0x34);    
+ 279   1        
+ 280   1        // Doc gia tri tai dia chi da thiet lap
+ 281   1        LCD12864_WriteCmd(y_adr);   
+ 282   1        LCD12864_WriteCmd(x_adr);
+ 283   1      
+ 284   1        LCD12864_ReadData();      //Dummy read
+ 285   1        readValue = LCD12864_ReadData();
+ 286   1        P1 = readValue;
+ 287   1        readValue <<= 8;
+ 288   1        readValue |= LCD12864_ReadData();
+ 289   1      
+ 290   1      
+ 291   1        bt = bt | readValue; // them 1 diem trong khi giu nguyen cac diem con lai
+C51 COMPILER V9.60.0.0   LCD12864                                                          12/23/2023 11:58:25 PAGE 6   
+
+ 292   1        h_bit = bt >> 8;
+ 293   1      //  P1 = h_bit;
+ 294   1        l_bit = bt & 0x00FF;
+ 295   1      //  P3 = l_bit;
+ 296   1      
+ 297   1        // Ghi gia tri vao vi tri da thiet lap
+ 298   1        LCD12864_WriteCmd(y_adr);    
+ 299   1        LCD12864_WriteCmd(x_adr);
+ 300   1        LCD12864_WriteData(h_bit);
+ 301   1        LCD12864_WriteData(l_bit);
+ 302   1        
+ 303   1        // gui lenh Extended Function Set 0x36 (0011 0110) -> chon che do giao tiep 8 bit, bit thu 3 = 1 -> exten
+             -ded instruction
+ 304   1        // bit thu 2 -> graphic display ON
+ 305   1        LCD12864_WriteCmd(0x36);     
+ 306   1        // gui lenh Function set 0x30 (0011 0000)-> chon che do giao tiep 8 bit, bit thu 3 = 0 -> basic instructi
+             -on
+ 307   1        LCD12864_WriteCmd(0x30);     
+ 308   1      }
+ 309          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    659    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      15
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

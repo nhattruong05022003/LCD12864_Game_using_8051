@@ -1,0 +1,749 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include<reg51.h>
+   2          #include<stdio.h>
+   3          #include<stdlib.h>
+   4          #include"lcd12864.h"
+   5          #include"i2c.h"
+   6          
+   7          unsigned char pos1 = 16;
+   8          unsigned char pos2 = 16;
+   9          unsigned char pos3 = 16;
+  10          unsigned char pos4 = 16;
+  11          unsigned char count = 0;
+  12          unsigned char count1 = 0;
+  13          unsigned int score = 0;
+  14          unsigned char vitri = 1;
+  15          unsigned char dokho = 5;
+  16          bit start = 0;
+  17          bit menu = 1;
+  18          bit update = 1;
+  19          bit gameover = 0;
+  20          bit check_spam1 = 0;
+  21          bit check_spam2 = 0;
+  22          bit check_spam3 = 0;
+  23          bit check_spam4 = 0;
+  24          unsigned char hang1[] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x2
+             -0, 0x20, 0x20};
+  25          unsigned char hang2[] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x2
+             -0, 0x20, 0x20};
+  26          unsigned char hang3[] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x2
+             -0, 0x20, 0x20};
+  27          unsigned char hang4[] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x2
+             -0, 0x20, 0x20};
+  28          unsigned int random;
+  29          unsigned int temp;
+  30          unsigned int bxh[] = {0, 0, 0};
+  31          int i = 0;
+  32          int j = 0;
+  33          sbit NUT_LEN = P3^0;
+  34          sbit NUT_XUONG = P3^1;
+  35          sbit OK = P3^3;
+  36          
+  37          void Delay10ms(unsigned int c);
+  38          
+  39          void delay_ms(unsigned int t){
+  40   1        for(i = 0; i < t; i++)
+  41   1          for(j = 0; j < 113; j++);
+  42   1      }
+  43          
+  44          void delay1MS ()
+  45          {
+  46   1        TMOD = 0X01;  // timer 0, mode 1 :16bit
+  47   1        TH0  = 0XFC;  //8bit trong so cao
+  48   1        TL0  = 0X18;  //8bit trong do thap
+  49   1        TR0  = 1;     // start timer 0
+  50   1        //(FFFF+1 - FC18). 1us = 1ms
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 2   
+
+  51   1        while (TF0 == 0);
+  52   1        TR0  =0;      //stop timer 0
+  53   1        TF0  =0;      //clear flag
+  54   1        // khi TF0==1 gan lai gia tri
+  55   1      }
+  56          
+  57          unsigned char At24c02Read(unsigned char addr)
+  58          {
+  59   1        unsigned char num = 0;
+  60   1        I2cStart();
+  61   1        I2cSendByte(0xa0);
+  62   1        I2cSendByte(addr);
+  63   1        I2cStart();
+  64   1        I2cSendByte(0xa1);
+  65   1        num = I2cReadByte();  
+  66   1        I2cStop();
+  67   1        return num;
+  68   1      }
+  69          
+  70          
+  71          void At24c02Write(unsigned char addr,unsigned char dat)
+  72          {
+  73   1        I2cStart();
+  74   1        I2cSendByte(0xa0);
+  75   1        I2cSendByte(addr);
+  76   1        I2cSendByte(dat); 
+  77   1        I2cStop();
+  78   1      }
+  79          
+  80          
+  81          void LCD12864_WriteStr(unsigned char *s){
+  82   1        i = 0;
+  83   1        while(i < 16){
+  84   2          LCD12864_WriteData(s[i]);
+  85   2          i ++;
+  86   2        }
+  87   1      }
+  88          
+  89          void WriteString(unsigned char *str){
+  90   1        i = 0;
+  91   1        while(str[i] != 0){
+  92   2          LCD12864_WriteData(str[i]);
+  93   2          i ++;
+  94   2        }
+  95   1      }
+  96          void SapXepBXH(void){
+  97   1        temp = At24c02Read(0);
+  98   1        Delay10ms(1);
+  99   1        temp <<= 8;
+ 100   1        temp |= At24c02Read(1);
+ 101   1        Delay10ms(1);
+ 102   1        bxh[0] = temp;
+ 103   1        
+ 104   1        temp = At24c02Read(2);
+ 105   1        Delay10ms(1);
+ 106   1        temp <<= 8;
+ 107   1        temp |= At24c02Read(3);
+ 108   1        Delay10ms(1);
+ 109   1        bxh[1] = temp;
+ 110   1        
+ 111   1        temp = At24c02Read(4);
+ 112   1        Delay10ms(1);
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 3   
+
+ 113   1        temp <<= 8;
+ 114   1        temp |= At24c02Read(5);
+ 115   1        Delay10ms(1);
+ 116   1        bxh[2] = temp;
+ 117   1        
+ 118   1        for(i = 0; i < 3; i++){
+ 119   2          if(bxh[i] > 9999){
+ 120   3            bxh[i] = 0;
+ 121   3          }
+ 122   2        }
+ 123   1        for(i = 0; i < 3; i++){
+ 124   2          for(j = i+1; j < 3; j++){
+ 125   3            if(bxh[i] < bxh[j]){
+ 126   4              temp = bxh[i];
+ 127   4              bxh[i] = bxh[j];
+ 128   4              bxh[j] = temp;
+ 129   4            }
+ 130   3          }
+ 131   2        }
+ 132   1      }
+ 133          
+ 134          void EndGame(void){
+ 135   1        unsigned char *str = "Game over ";
+ 136   1        EA = 0;
+ 137   1        SapXepBXH();
+ 138   1        LCD12864_WriteCmd(0x01);
+ 139   1        LCD12864_SetWindow(0, 2);
+ 140   1        WriteString(str);
+ 141   1        LCD12864_SetWindow(1, 3);
+ 142   1        LCD12864_WriteData(score / 100 + 0x30);
+ 143   1        LCD12864_WriteData(score / 10 % 10 + 0x30);
+ 144   1        LCD12864_WriteData(score % 10 + 0x30);
+ 145   1        LCD12864_WriteData(' ');
+ 146   1        start = 0;
+ 147   1        menu = 1;
+ 148   1        if(score > bxh[0]){
+ 149   2          P1 = score;
+ 150   2          temp = bxh[0];
+ 151   2          bxh[0] = score;
+ 152   2          At24c02Write(0, bxh[0] >> 8);
+ 153   2          Delay10ms(2);
+ 154   2          At24c02Write(1, bxh[0] & 0xFF);
+ 155   2          Delay10ms(2);
+ 156   2          score = bxh[1];
+ 157   2          bxh[1] = temp;
+ 158   2          At24c02Write(2, bxh[1] >> 8);
+ 159   2          Delay10ms(2);
+ 160   2          At24c02Write(3, bxh[1] & 0xFF);
+ 161   2          Delay10ms(2);
+ 162   2          bxh[2] = score;
+ 163   2          At24c02Write(4, bxh[2] >> 8);
+ 164   2          Delay10ms(2);
+ 165   2          At24c02Write(5, bxh[2] & 0xFF);
+ 166   2        }
+ 167   1        else if(score > bxh[1]){
+ 168   2          temp = bxh[1];
+ 169   2          bxh[1] = score;
+ 170   2          At24c02Write(2, bxh[1] >> 8);
+ 171   2          Delay10ms(2);
+ 172   2          At24c02Write(3, bxh[1] & 0xFF);
+ 173   2          Delay10ms(2);
+ 174   2          bxh[2] = temp;
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 4   
+
+ 175   2          At24c02Write(4, bxh[2] >> 8);
+ 176   2          Delay10ms(2);
+ 177   2          At24c02Write(5, bxh[2] & 0xFF);
+ 178   2        }
+ 179   1        else if(score > bxh[2]){
+ 180   2          bxh[2] = score;
+ 181   2          At24c02Write(4, bxh[2] >> 8);
+ 182   2          Delay10ms(2);
+ 183   2          At24c02Write(5, bxh[2] & 0xFF);
+ 184   2        }
+ 185   1        check_spam1 = 0;
+ 186   1        check_spam2 = 0;
+ 187   1        check_spam3 = 0;
+ 188   1        check_spam4 = 0;
+ 189   1        i = 0;
+ 190   1        while(i < 16){
+ 191   2          hang1[i] = 0x20;
+ 192   2          hang2[i] = 0x20;
+ 193   2          hang3[i] = 0x20;
+ 194   2          hang4[i] = 0x20;
+ 195   2          i ++;
+ 196   2        }
+ 197   1        pos1 = 16;
+ 198   1        pos2 = 16;
+ 199   1        pos3 = 16;
+ 200   1        pos4 = 16;
+ 201   1        score = 0;
+ 202   1        gameover = 0;
+ 203   1        count = 0;
+ 204   1        count1 = 0;
+ 205   1        while(1){
+ 206   2          if(OK == 0){
+ 207   3            delay_ms(20);
+ 208   3            while(OK == 0);
+ 209   3            LCD12864_WriteCmd(0x01);
+ 210   3            return;
+ 211   3          }
+ 212   2        }
+ 213   1      }
+ 214          
+ 215          
+ 216          void btn_setup ()
+ 217          {
+ 218   1        // EX0 = 1; // ngat ngoai INT0
+ 219   1        EX1 = 1; // ngat ngoai INT1
+ 220   1        EA = 1;
+ 221   1      }
+ 222          
+ 223          
+ 224          void Len(void){
+ 225   1        if(vitri == 4){
+ 226   2          hang4[0] = ' ';
+ 227   2          LCD12864_SetWindow(3, 0);
+ 228   2          LCD12864_WriteStr(hang4);
+ 229   2        }
+ 230   1        else if(vitri == 3){
+ 231   2          hang3[0] = ' ';
+ 232   2          LCD12864_SetWindow(2, 0);
+ 233   2          LCD12864_WriteStr(hang3);
+ 234   2        }
+ 235   1        else if(vitri == 2){
+ 236   2          hang2[0] = ' ';
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 5   
+
+ 237   2          LCD12864_SetWindow(1, 0);
+ 238   2          LCD12864_WriteStr(hang2);
+ 239   2        }
+ 240   1        else{
+ 241   2          hang1[0] = ' ';
+ 242   2          LCD12864_SetWindow(0, 0);
+ 243   2          LCD12864_WriteStr(hang1);
+ 244   2        }
+ 245   1        vitri = vitri == 0 ? 0 : vitri - 1;
+ 246   1        if(vitri == 4){
+ 247   2          hang4[0] = 'I';
+ 248   2          LCD12864_SetWindow(3, 0);
+ 249   2          LCD12864_WriteStr(hang4);
+ 250   2        }
+ 251   1        else if(vitri == 3){
+ 252   2          hang3[0] = 'I';
+ 253   2          LCD12864_SetWindow(2, 0);
+ 254   2          LCD12864_WriteStr(hang3);
+ 255   2        }
+ 256   1        else if(vitri == 2){
+ 257   2          hang2[0] = 'I';
+ 258   2          LCD12864_SetWindow(1, 0);
+ 259   2          LCD12864_WriteStr(hang2);
+ 260   2        }
+ 261   1        else{
+ 262   2          hang1[0] = 'I';
+ 263   2          LCD12864_SetWindow(0, 0);
+ 264   2          LCD12864_WriteStr(hang1);
+ 265   2        }
+ 266   1        if((vitri == 1 && (pos1 == 16 || pos1 == 0) && check_spam1) || (vitri == 2 && (pos2 == 16 || pos2 == 0) &
+             -& check_spam2) || (vitri == 3 && (pos3 == 16 || pos3 == 0) && check_spam3) || (vitri == 4 && (pos4 == 16 || pos4 == 0) &
+             -& check_spam4)){
+ 267   2          gameover = 1;
+ 268   2          score --;
+ 269   2        }
+ 270   1          
+ 271   1        update = 1;
+ 272   1      }
+ 273          
+ 274          void Xuong(void){
+ 275   1        if(vitri == 4){
+ 276   2          hang4[0] = ' ';
+ 277   2          LCD12864_SetWindow(3, 0);
+ 278   2          LCD12864_WriteStr(hang4);
+ 279   2        }
+ 280   1        else if(vitri == 3){
+ 281   2          hang3[0] = ' ';
+ 282   2          LCD12864_SetWindow(2, 0);
+ 283   2          LCD12864_WriteStr(hang3);
+ 284   2        }
+ 285   1        else if(vitri == 2){
+ 286   2          hang2[0] = ' ';
+ 287   2          LCD12864_SetWindow(1, 0);
+ 288   2          LCD12864_WriteStr(hang2);
+ 289   2        }
+ 290   1        else{
+ 291   2          hang1[0] = ' ';
+ 292   2          LCD12864_SetWindow(0, 0);
+ 293   2          LCD12864_WriteStr(hang1);
+ 294   2        }
+ 295   1        vitri = vitri == 4 ? 4 : vitri + 1;
+ 296   1        if(vitri == 4){
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 6   
+
+ 297   2          hang4[0] = 'I';
+ 298   2          LCD12864_SetWindow(3, 0);
+ 299   2          LCD12864_WriteStr(hang4);
+ 300   2        }
+ 301   1        else if(vitri == 3){
+ 302   2          hang3[0] = 'I';
+ 303   2          LCD12864_SetWindow(2, 0);
+ 304   2          LCD12864_WriteStr(hang3);
+ 305   2        }
+ 306   1        else if(vitri == 2){
+ 307   2          hang2[0] = 'I';
+ 308   2          LCD12864_SetWindow(1, 0);
+ 309   2          LCD12864_WriteStr(hang2);
+ 310   2        }
+ 311   1        else{
+ 312   2          hang1[0] = 'I';
+ 313   2          LCD12864_SetWindow(0, 0);
+ 314   2          LCD12864_WriteStr(hang1);
+ 315   2        }
+ 316   1        if((vitri == 1 && (pos1 == 16 || pos1 == 0) && check_spam1) || (vitri == 2 && (pos2 == 16 || pos2 == 0) &
+             -& check_spam2) || (vitri == 3 && (pos3 == 16 || pos3 == 0) && check_spam3) || (vitri == 4 && (pos4 == 16 || pos4 == 0) &
+             -& check_spam4)){
+ 317   2          gameover = 1;
+ 318   2          score --;
+ 319   2        }
+ 320   1        update = 1;
+ 321   1      }
+ 322          
+ 323          void SpamObstacle(void){
+ 324   1        random = rand() % 4;
+ 325   1        if(random == 0 && !check_spam1){
+ 326   2          hang1[15] = 0x06;
+ 327   2          pos1 = 15;
+ 328   2          check_spam1 = 1;
+ 329   2        }
+ 330   1        else if(random == 1 && !check_spam2){
+ 331   2          hang2[15] = 0x06;
+ 332   2          pos2 = 15;
+ 333   2          check_spam2 = 1;
+ 334   2        }
+ 335   1        else if(random == 2 && !check_spam3){
+ 336   2          hang3[15] = 0x06;
+ 337   2          pos3 = 15;
+ 338   2          check_spam3 = 1;
+ 339   2        }
+ 340   1        else if(random == 3 && !check_spam4){
+ 341   2          hang4[15] = 0x06;
+ 342   2          pos4 = 15;
+ 343   2          check_spam4 = 1;
+ 344   2        }
+ 345   1        if(vitri == 4){
+ 346   2          hang4[0] = 'I';
+ 347   2          LCD12864_SetWindow(3, 0);
+ 348   2          LCD12864_WriteStr(hang4);
+ 349   2        }
+ 350   1        else if(vitri == 3){
+ 351   2          hang3[0] = 'I';
+ 352   2          LCD12864_SetWindow(2, 0);
+ 353   2          LCD12864_WriteStr(hang3);
+ 354   2        }
+ 355   1        else if(vitri == 2){
+ 356   2          hang2[0] = 'I';
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 7   
+
+ 357   2          LCD12864_SetWindow(1, 0);
+ 358   2          LCD12864_WriteStr(hang2);
+ 359   2        }
+ 360   1        else{
+ 361   2          hang1[0] = 'I';
+ 362   2          LCD12864_SetWindow(0, 0);
+ 363   2          LCD12864_WriteStr(hang1);
+ 364   2        }
+ 365   1        update = 1;
+ 366   1      }
+ 367          
+ 368          void MoveObstacle(void){
+ 369   1        hang1[pos1] = 0x20;
+ 370   1        hang2[pos2] = 0x20;
+ 371   1        hang3[pos3] = 0x20;
+ 372   1        hang4[pos4] = 0x20;
+ 373   1        check_spam1 = (pos1 == 0 || pos1 > 15) ? 0 : 1;
+ 374   1        check_spam2 = (pos2 == 0 || pos2 > 15) ? 0 : 1;
+ 375   1        check_spam3 = (pos3 == 0 || pos3 > 15) ? 0 : 1;
+ 376   1        check_spam4 = (pos4 == 0 || pos4 > 15) ? 0 : 1;
+ 377   1        if(check_spam1){
+ 378   2          pos1 = pos1 == 0 ? 16 : pos1 - 1;
+ 379   2          if(pos1 == 0 && vitri == 1)
+ 380   2            gameover = 1;
+ 381   2          else if(pos1 == 0)
+ 382   2            score ++;
+ 383   2          hang1[pos1] = 0x06;
+ 384   2        }
+ 385   1        else{
+ 386   2          pos1 = 16;
+ 387   2        }
+ 388   1        if(check_spam2){
+ 389   2          pos2 = pos2 == 0 ? 16 : pos2 - 1;
+ 390   2          if(pos2 == 0 && vitri == 2)
+ 391   2            gameover = 1;
+ 392   2          else if(pos2 == 0)
+ 393   2            score ++;
+ 394   2          hang2[pos2] = 0x06;
+ 395   2        }
+ 396   1        else{
+ 397   2          pos2 = 16;
+ 398   2        }
+ 399   1        if(check_spam3){
+ 400   2          pos3 = pos3 == 0 ? 16 : pos3 - 1;
+ 401   2          if(pos3 == 0 && vitri == 3)
+ 402   2            gameover = 1;
+ 403   2          else if(pos3 == 0)
+ 404   2            score ++;
+ 405   2          hang3[pos3] = 0x06;
+ 406   2        }
+ 407   1        else{
+ 408   2          pos3 = 16;
+ 409   2        }
+ 410   1        if(check_spam4){
+ 411   2          pos4 = pos4 == 0 ? 16 : pos4 - 1;
+ 412   2          if(pos4 == 0 && vitri == 4)
+ 413   2            gameover = 1;
+ 414   2          else if(pos4 == 0)
+ 415   2            score ++;
+ 416   2          hang4[pos4] = 0x06;
+ 417   2        }
+ 418   1        else{
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 8   
+
+ 419   2          pos4 = 16;
+ 420   2        }
+ 421   1        if(vitri == 4 && gameover != 1){
+ 422   2          hang4[0] = 'I';
+ 423   2          LCD12864_SetWindow(3, 0);
+ 424   2          LCD12864_WriteStr(hang4);
+ 425   2        }
+ 426   1        else if(vitri == 3 && gameover != 1){
+ 427   2          hang3[0] = 'I';
+ 428   2          LCD12864_SetWindow(2, 0);
+ 429   2          LCD12864_WriteStr(hang3);
+ 430   2        }
+ 431   1        else if(vitri == 2 && gameover != 1){
+ 432   2          hang2[0] = 'I';
+ 433   2          LCD12864_SetWindow(1, 0);
+ 434   2          LCD12864_WriteStr(hang2);
+ 435   2        }
+ 436   1        else if(vitri == 1 && gameover != 1){
+ 437   2          hang1[0] = 'I';
+ 438   2          LCD12864_SetWindow(0, 0);
+ 439   2          LCD12864_WriteStr(hang1);
+ 440   2        }
+ 441   1        LCD12864_SetWindow(0, 0);
+ 442   1        LCD12864_WriteStr(hang1);
+ 443   1        LCD12864_SetWindow(1, 0);
+ 444   1        LCD12864_WriteStr(hang2);
+ 445   1        LCD12864_SetWindow(2, 0);
+ 446   1        LCD12864_WriteStr(hang3);
+ 447   1        LCD12864_SetWindow(3, 0);
+ 448   1        LCD12864_WriteStr(hang4);
+ 449   1        update = 1;
+ 450   1        count ++;
+ 451   1      }
+ 452          void DieuKhien (void) interrupt 2  
+ 453          {
+ 454   1        Delay10ms(2);
+ 455   1        while(OK == 0);
+ 456   1        if(NUT_LEN == 0){
+ 457   2          Delay10ms(2);
+ 458   2          Len();
+ 459   2        }
+ 460   1        if(NUT_XUONG == 0){
+ 461   2          Delay10ms(2);
+ 462   2          Xuong();
+ 463   2        }
+ 464   1      }
+ 465          
+ 466          void DisplayDoKho(void){
+ 467   1        LCD12864_WriteCmd(0x01);
+ 468   1        LCD12864_SetWindow(0, 2);
+ 469   1        WriteString("Do kho");
+ 470   1        LCD12864_SetWindow(2, 1);
+ 471   1        if(dokho == 1){
+ 472   2          WriteString("<   Kho");
+ 473   2        }
+ 474   1        else if(dokho == 5){
+ 475   2          WriteString("< Thuong >");
+ 476   2        }
+ 477   1        else{
+ 478   2          WriteString("    De   >");
+ 479   2        }
+ 480   1        while(1){
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 9   
+
+ 481   2          if(NUT_LEN == 0){
+ 482   3            Delay10ms(2);
+ 483   3            while(NUT_LEN == 0);
+ 484   3            dokho = dokho == 1 ? 1 : dokho - 4;
+ 485   3            LCD12864_WriteCmd(0x01);
+ 486   3            LCD12864_SetWindow(0, 2);
+ 487   3            WriteString("Do kho");
+ 488   3            LCD12864_SetWindow(2, 1);
+ 489   3            if(dokho == 1){
+ 490   4              WriteString("<   Kho");
+ 491   4            }
+ 492   3            else if(dokho == 5){
+ 493   4              WriteString("< Thuong >");
+ 494   4            }
+ 495   3            else{
+ 496   4              WriteString("    De   >");
+ 497   4            }
+ 498   3          }
+ 499   2          if(NUT_XUONG == 0){
+ 500   3            Delay10ms(2);
+ 501   3            while(NUT_XUONG == 0);
+ 502   3            dokho = dokho == 9 ? 9 : dokho + 4;
+ 503   3            LCD12864_WriteCmd(0x01);
+ 504   3            LCD12864_SetWindow(0, 2);
+ 505   3            WriteString("Do kho");
+ 506   3            LCD12864_SetWindow(2, 1);
+ 507   3            if(dokho == 1){
+ 508   4              WriteString("<   Kho");
+ 509   4            }
+ 510   3            else if(dokho == 5){
+ 511   4              WriteString("< Thuong >");
+ 512   4            }
+ 513   3            else{
+ 514   4              WriteString("    De   >");
+ 515   4            }
+ 516   3          }
+ 517   2          if(OK == 0){
+ 518   3            LCD12864_WriteCmd(0x01);
+ 519   3            menu = 1;
+ 520   3            return;
+ 521   3          }
+ 522   2        }
+ 523   1      }
+ 524          
+ 525          
+ 526          
+ 527          void DisplayBXH(void){
+ 528   1        SapXepBXH();
+ 529   1        LCD12864_WriteCmd(0x01);
+ 530   1        LCD12864_SetWindow(0, 0);
+ 531   1        WriteString("Bang xep hang");
+ 532   1        LCD12864_SetWindow(1, 0);
+ 533   1        WriteString("1.");
+ 534   1        LCD12864_WriteData(bxh[0] / 100 + 0x30);
+ 535   1        LCD12864_WriteData(bxh[0] / 10 % 10 + 0x30);
+ 536   1        LCD12864_WriteData(bxh[0] % 10 + 0x30);
+ 537   1        LCD12864_WriteData(' ');
+ 538   1        LCD12864_SetWindow(2, 0);
+ 539   1        WriteString("2.");
+ 540   1        LCD12864_WriteData(bxh[1] / 100 + 0x30);
+ 541   1        LCD12864_WriteData(bxh[1] / 10 % 10 + 0x30);
+ 542   1        LCD12864_WriteData(bxh[1] % 10 + 0x30);
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 10  
+
+ 543   1        LCD12864_WriteData(' ');
+ 544   1        LCD12864_SetWindow(3, 0);
+ 545   1        WriteString("3.");
+ 546   1        LCD12864_WriteData(bxh[2] / 100 + 0x30);
+ 547   1        LCD12864_WriteData(bxh[2] / 10 % 10 + 0x30);
+ 548   1        LCD12864_WriteData(bxh[2] % 10 + 0x30);
+ 549   1        LCD12864_WriteData(' ');
+ 550   1        while(1){
+ 551   2          if(OK == 0){
+ 552   3            LCD12864_WriteCmd(0x01);
+ 553   3            menu = 1;
+ 554   3            return;
+ 555   3          }
+ 556   2        }
+ 557   1      }
+ 558          
+ 559          void DisplayMenu(void){
+ 560   1        EA = 0;
+ 561   1        // LCD12864_WriteCmd(0x01);
+ 562   1        if(menu == 1){
+ 563   2          vitri = 1;
+ 564   2          menu = 0;
+ 565   2        }
+ 566   1        LCD12864_SetWindow(0, 3);
+ 567   1        WriteString("Menu");
+ 568   1        LCD12864_SetWindow(1, 1);
+ 569   1        WriteString("Bat dau");
+ 570   1        LCD12864_SetWindow(2, 1);
+ 571   1        WriteString("BXH");
+ 572   1        LCD12864_SetWindow(3, 1);
+ 573   1        WriteString("Do kho");
+ 574   1        LCD12864_SetWindow(vitri, 0);
+ 575   1        LCD12864_WriteData('>');
+ 576   1      
+ 577   1        if(NUT_LEN == 0){
+ 578   2          Delay10ms(2);
+ 579   2          while(NUT_LEN == 0);
+ 580   2          LCD12864_SetWindow(vitri, 0);
+ 581   2          LCD12864_WriteData(' ');
+ 582   2          vitri = vitri == 1 ? 1 : vitri - 1;
+ 583   2          LCD12864_SetWindow(vitri, 0);
+ 584   2          LCD12864_WriteData('>');
+ 585   2        }
+ 586   1        if(NUT_XUONG == 0){
+ 587   2          Delay10ms(2);
+ 588   2          while(NUT_XUONG == 0);
+ 589   2          LCD12864_SetWindow(vitri, 0);
+ 590   2          LCD12864_WriteData(' ');
+ 591   2          vitri = vitri == 3 ? 3 : vitri + 1;
+ 592   2          LCD12864_SetWindow(vitri, 0);
+ 593   2          LCD12864_WriteData('>');
+ 594   2        }
+ 595   1        if(OK == 0){
+ 596   2          Delay10ms(2);
+ 597   2          while(OK == 0);
+ 598   2          if(vitri == 1){
+ 599   3            start = 1;
+ 600   3            EA = 1;
+ 601   3            return;
+ 602   3          }
+ 603   2          else if(vitri == 2){
+ 604   3            DisplayBXH();
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 11  
+
+ 605   3          }
+ 606   2          else{
+ 607   3            DisplayDoKho();
+ 608   3            P1 = dokho;
+ 609   3          }
+ 610   2        }
+ 611   1      }
+ 612          
+ 613          
+ 614          
+ 615          void main()
+ 616          {
+ 617   1        LCD12864_Init();
+ 618   1        btn_setup();
+ 619   1        SapXepBXH();
+ 620   1        OK = 1;
+ 621   1        NUT_LEN = 1;
+ 622   1        NUT_XUONG = 1;
+ 623   1      //  At24c02Write(0, 0xFF);
+ 624   1      //  At24c02Write(1, 0xFF);
+ 625   1      //  At24c02Write(2, 0xFF);
+ 626   1      //  At24c02Write(3, 0xFF);
+ 627   1      //  At24c02Write(4, 0xFF);
+ 628   1      //  At24c02Write(5, 0xFF);
+ 629   1        while(1)
+ 630   1        {
+ 631   2          if(start == 0){
+ 632   3            DisplayMenu();
+ 633   3            if(start == 1){
+ 634   4              SpamObstacle();
+ 635   4            }
+ 636   3          }
+ 637   2          else{
+ 638   3            if(update){
+ 639   4              if(gameover){
+ 640   5                EndGame();
+ 641   5              }
+ 642   4              else{
+ 643   5                if(vitri == 4){
+ 644   6                  hang4[0] = 'I';
+ 645   6                }
+ 646   5                else if(vitri == 3){
+ 647   6                  hang3[0] = 'I';
+ 648   6                }
+ 649   5                else if(vitri == 2){
+ 650   6                  hang2[0] = 'I';
+ 651   6                }
+ 652   5                else{
+ 653   6                  hang1[0] = 'I';
+ 654   6                }
+ 655   5      
+ 656   5                LCD12864_SetWindow(0, 0);
+ 657   5                LCD12864_WriteStr(hang1);
+ 658   5                LCD12864_SetWindow(1, 0);
+ 659   5                LCD12864_WriteStr(hang2);
+ 660   5                LCD12864_SetWindow(2, 0);
+ 661   5                LCD12864_WriteStr(hang3);
+ 662   5                LCD12864_SetWindow(3, 0);
+ 663   5                LCD12864_WriteStr(hang4);
+ 664   5              }
+ 665   4              update = 0;
+ 666   4            }   
+C51 COMPILER V9.60.0.0   MAIN                                                              12/23/2023 11:58:25 PAGE 12  
+
+ 667   3            if(count >= 5 && gameover != 1){
+ 668   4              SpamObstacle();
+ 669   4              count = 0;
+ 670   4            }
+ 671   3            if(count1 >= dokho && gameover != 1){
+ 672   4              MoveObstacle();
+ 673   4              count1 = 0;
+ 674   4            }
+ 675   3            count1 ++;
+ 676   3            delay_ms(50);
+ 677   3            // delay1MS();
+ 678   3          }
+ 679   2        }
+ 680   1      }
+ 681          
+ 682          
+ 683          void Delay10ms(unsigned int c)   
+ 684          {
+ 685   1          unsigned char a, b;
+ 686   1      
+ 687   1          for (;c>0;c--)
+ 688   1          {
+ 689   2            for (b=38;b>0;b--)
+ 690   2            {
+ 691   3              for (a=130;a>0;a--);
+ 692   3            }      
+ 693   2          }
+ 694   1              
+ 695   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   3210    ----
+   CONSTANT SIZE    =     88    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     88      13
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      8    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
